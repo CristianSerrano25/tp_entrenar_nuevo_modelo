@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Predicción de función cuadrática</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f8;
+            color: #333;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+
+        div {
+            background: #ffffff;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            margin: 10px;
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        input[type="number"] {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            width: 100%;
+            font-size: 1em;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #2980b9;
+        }
+
+        #result {
+            font-size: 1.1em;
+            margin-top: 15px;
+            color: #2d3436;
+        }
+    </style>
+</head>
+<body>
+    <h1>Modelo para predecir y = 2x² - 3x + 1</h1>
+
+    <div>
+        <label for="inputValue">Ingrese valor de y para predecir x:</label>
+        <input type="number" id="inputValue" step="0.1">
+        <button onclick="predictX()">Predecir x</button>
+    </div>
+
+    <div id="result"></div>
+
+    <script>
+        let model;
+
+        async function createModel() {
+            model = tf.sequential();
+
+            model.add(tf.layers.dense({ units: 20, inputShape: [1], activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 20, activation: 'relu' }));
+            model.add(tf.layers.dense({ units: 1 }));
+
+            model.compile({ optimizer: 'adam', loss: 'meanSquaredError' });
+
+            const xs = tf.tensor1d([...Array(100).keys()].map(i => (i - 50) / 10));
+            const ys = tf.tensor1d(xs.arraySync().map(x => 2 * x * x - 3 * x + 1));
+
+            await model.fit(xs, ys, {
+                epochs: 2000,
+                batchSize: 32,
+                callbacks: {
+                    onEpochEnd: (epoch, logs) => {
+                        console.log(`Época ${epoch}: pérdida = ${logs.loss}`);
+                    }
+                }
+            });
+
+            console.log("Modelo entrenado!");
+        }
+
+        async function predictX() {
+            const yValue = parseFloat(document.getElementById('inputValue').value);
+            if (isNaN(yValue)) {
+                alert("Por favor ingrese un número válido");
+                return;
+            }
+
+            const target = tf.scalar(yValue);
+            const x = tf.variable(tf.scalar(0));
+            const optimizer = tf.train.adam(0.1);
+            const steps = 100;
+
+            for (let i = 0; i < steps; i++) {
+                optimizer.minimize(() => {
+                    const yPred = x.square().mul(2).sub(x.mul(3)).add(1);
+                    return yPred.sub(target).square();
+                });
+            }
+
+            const xValue = await x.data();
+
+            const x2 = tf.variable(tf.scalar(5));
+            for (let i = 0; i < steps; i++) {
+                optimizer.minimize(() => {
+                    const yPred = x2.square().mul(2).sub(x2.mul(3)).add(1);
+                    return yPred.sub(target).square();
+                });
+            }
+
+            const xValue2 = await x2.data();
+
+            let resultText = `<p>Para y = ${yValue}:</p>`;
+            if (Math.abs(xValue - xValue2) > 0.1) {
+                resultText += `<p>Soluciones: x ≈ ${xValue[0].toFixed(4)} o x ≈ ${xValue2[0].toFixed(4)}</p>`;
+            } else {
+                resultText += `<p>Solución: x ≈ ${xValue[0].toFixed(4)}</p>`;
+            }
+
+            const discriminant = 9 - 8 * (1 - yValue);
+            if (discriminant < 0) {
+                resultText += `<p>¡No hay soluciones reales para y = ${yValue}!</p>`;
+            }
+
+            document.getElementById('result').innerHTML = resultText;
+
+            tf.dispose([x, x2, target]);
+        }
+
+        document.addEventListener('DOMContentLoaded', createModel);
+    </script>
+</body>
+</html>
