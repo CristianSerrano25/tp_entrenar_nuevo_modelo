@@ -16,6 +16,3 @@
 2. Ingresa un valor de `y` y haz clic en **"Predecir x"**.
 3. El sistema mostrará una o dos posibles soluciones para `x`.
 
-## Nota
-
-Este proyecto es un experimento educativo que demuestra cómo usar aprendizaje automático en el navegador para resolver ecuaciones matemáticas simples.
